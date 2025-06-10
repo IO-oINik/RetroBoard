@@ -1,0 +1,23 @@
+spring:
+  profiles:
+    active: {$PROFILE_ACTIVE:dev}
+  application:
+    name: db-service
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  kafka:
+    consumer:
+      group-id: db-event-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: ru.edu.retro.dbservice.configs.KafkaEventDeserializer
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/app.log
+
+server:
+  port: 8081
+

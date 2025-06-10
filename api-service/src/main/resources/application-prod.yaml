@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/Retro}
+    username: ${DB_USERNAME:retro_user}
+    password: ${DB_PASSWORD:12345}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY:92c5df3d91acf885cd7744bef9c2497b7d3da3d1b4fcd195bebb4f1a7cbdccf52c65214097f379f8334b35cf2dc401fb730a9936f69a8236544703966c5c315020e6734bf2538263d2a31fa32e52346ecc7ba7d674e97e3f1655c0fffd7f49d38382262f339a6d455f0997f9dec920d0ddd3177cda0ec1a48e696d5f5e11c86a2cdd2e500337b6a90b319d14ecb875a510e0f85ee459af07de8519f941d274c7d87b9bd78e3a10523ae76f04abe3b015e0352d9d33fbb624e033a81ddeec5b01598ca06180adb5cf0ca67da12f21588302b6cdaaae727c4b525d1f5d3a5fbf6c29daa4605e4053b981073136aa8f689805bacca3bf47b80a867808c9b0d13e22}
+cors:
+  url: ${CORS_URL:localhost:8090}
