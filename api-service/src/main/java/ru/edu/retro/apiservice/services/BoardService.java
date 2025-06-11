@@ -1,6 +1,7 @@
 package ru.edu.retro.apiservice.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,9 +33,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BoardService {
+
     private final BoardRepositoryReadOnly boardRepository;
     private final SVGTemplateRepositoryReadOnly svgTemplateRepository;
     private final UserService userService;
@@ -46,25 +49,36 @@ public class BoardService {
     private final SseEmitterService sseEmitterService;
 
     public BoardResponse getBoardById(UUID id) {
-        return boardMapper
-                .toBoardResponse(boardRepository
-                        .findById(id).
-                        orElseThrow(() -> new EntityNotFoundException("Board not found with the ID: " + id)));
+        log.debug("Fetching board by ID: {}", id);
+        return boardMapper.toBoardResponse(boardRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Board not found with ID: {}", id);
+                    return new EntityNotFoundException("Board not found with the ID: " + id);
+                }));
     }
 
     public List<BoardResponse> getMyBoards() {
         var user = userService.findMe();
+        log.debug("Fetching boards for user ID: {}", user.id());
         var boards = boardRepository.findBoardsByAuthorId(user.id());
         return boards.stream().map(boardMapper::toBoardResponse).toList();
     }
 
     public BoardInviteToken getInviteTokenById(UUID id) {
-        var board = boardRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Board not found with the ID: " + id));
+        log.debug("Getting invite token for board ID: {}", id);
+        var board = boardRepository.findById(id).orElseThrow(() -> {
+            log.warn("Board not found with ID: {}", id);
+            return new EntityNotFoundException("Board not found with the ID: " + id);
+        });
         return new BoardInviteToken(board.getInviteEditToken());
     }
 
     public List<UserResponse> getEditorsByBoardId(UUID id) {
-        var board = boardRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Board not found with the ID: " + id));
+        log.debug("Fetching editors for board ID: {}", id);
+        var board = boardRepository.findById(id).orElseThrow(() -> {
+            log.warn("Board not found with ID: {}", id);
+            return new EntityNotFoundException("Board not found with the ID: " + id);
+        });
         return board.getEditors().stream().map(userMapper::toUserResponse).toList();
     }
 
@@ -76,76 +90,115 @@ public class BoardService {
         board.setInviteEditToken(UUID.randomUUID());
         board.setCreatedAt(LocalDateTime.now());
 
-        kafkaTemplate.send("db-event", new KafkaEvent<Board>("Board", "CREATE", board));
+        log.info("Creating board with ID: {}", board.getId());
+        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "CREATE", board));
         return boardMapper.toBoardResponse(board);
     }
 
     public void deleteBoardById(UUID id) {
         var user = findMe();
+        log.debug("Attempting to delete board ID: {} by user ID: {}", id, user.getId());
 
         Optional<Board> optionalBoard = boardRepository.findById(id);
         if (optionalBoard.isEmpty()) {
+            log.debug("Board not found with ID: {}, nothing to delete", id);
             return;
         }
-        var board = optionalBoard.get();
 
-        if(!user.getId().equals(board.getAuthor().getId())) {
+        var board = optionalBoard.get();
+        if (!user.getId().equals(board.getAuthor().getId())) {
+            log.warn("User ID: {} is forbidden to delete board ID: {}", user.getId(), board.getId());
             throw new ForbiddenException("User is forbidden from deleting the board with ID: " + board.getId());
         }
 
+        log.info("Deleting board ID: {}", id);
         kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "DELETE", board));
     }
 
     public void addEditor(UUID id, BoardInviteToken token) {
         var user = findMe();
+        log.debug("User ID: {} attempting to join board ID: {} with token", user.getId(), id);
 
-        var board = boardRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Board not found with ID: " + id));
+        var board = boardRepository.findById(id).orElseThrow(() -> {
+            log.warn("Board not found with ID: {}", id);
+            return new EntityNotFoundException("Board not found with ID: " + id);
+        });
+
         if (!board.getInviteEditToken().equals(token.token())) {
+            log.warn("Invalid invite token used for board ID: {}", id);
             throw new InvalidInviteTokenException("Invalid invite token");
         }
 
         if (!board.getAuthor().equals(user) && !board.getEditors().contains(user)) {
             board.getEditors().add(user);
+            log.info("User ID: {} added as editor to board ID: {}", user.getId(), id);
             kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", board));
+        } else {
+            log.debug("User ID: {} is already an editor or the author of board ID: {}", user.getId(), id);
         }
     }
 
     public BoardInviteToken generateNewInviteToken(UUID id) {
         var user = findMe();
+        log.debug("User ID: {} attempting to generate new token for board ID: {}", user.getId(), id);
 
-        var board = boardRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Board not found with ID: " + id));
+        var board = boardRepository.findById(id).orElseThrow(() -> {
+            log.warn("Board not found with ID: {}", id);
+            return new EntityNotFoundException("Board not found with ID: " + id);
+        });
+
         if (!board.getAuthor().equals(user)) {
+            log.warn("User ID: {} is forbidden to generate token for board ID: {}", user.getId(), id);
             throw new ForbiddenException("User is forbidden to generate new invite token");
         }
+
         var inviteToken = new BoardInviteToken(UUID.randomUUID());
         board.setInviteEditToken(inviteToken.token());
+
+        log.info("Generated new invite token for board ID: {}", id);
         kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", board));
         return inviteToken;
     }
 
     public void deleteEditor(UUID boardId, Long editorId) {
         var user = findMe();
+        log.debug("User ID: {} attempting to delete editor ID: {} from board ID: {}", user.getId(), editorId, boardId);
 
-        var board = boardRepository.findById(boardId).orElseThrow(() -> new EntityNotFoundException("Board not found with ID: " + boardId));
+        var board = boardRepository.findById(boardId).orElseThrow(() -> {
+            log.warn("Board not found with ID: {}", boardId);
+            return new EntityNotFoundException("Board not found with ID: " + boardId);
+        });
+
         if (!board.getAuthor().equals(user)) {
+            log.warn("User ID: {} is forbidden to delete editors from board ID: {}", user.getId(), boardId);
             throw new ForbiddenException("User is forbidden to delete editor");
         }
 
-        if (board.getEditors().contains(user)) {
-            board.getEditors().remove(user);
-            kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", board));
-        }
+        board.getEditors().removeIf(e -> e.getId().equals(editorId));
+        log.info("Editor ID: {} removed from board ID: {}", editorId, boardId);
+        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", board));
     }
 
     public ComponentResponse createComponent(UUID boardId, ComponentRequest componentRequest) {
         var user = findMe();
+        log.debug("User ID: {} creating component on board ID: {}", user.getId(), boardId);
 
-        var board = boardRepository.findById(boardId).orElseThrow(() -> new EntityNotFoundException("Board not found with ID: " + boardId));
+        var board = boardRepository.findById(boardId).orElseThrow(() -> {
+            log.warn("Board not found with ID: {}", boardId);
+            return new EntityNotFoundException("Board not found with ID: " + boardId);
+        });
+
         if (!board.getEditors().contains(user) && !board.getAuthor().equals(user)) {
+            log.warn("User ID: {} is forbidden to create component on board ID: {}", user.getId(), boardId);
             throw new ForbiddenException("User is forbidden to create component");
         }
 
-        var svgTemplate = svgTemplateRepository.findById(componentRequest.sourceId()).orElseThrow(() -> new BadRequestException("Source not found with ID: " + componentRequest.sourceId()));
+        var svgTemplate = svgTemplateRepository.findById(componentRequest.sourceId())
+                .orElseThrow(() -> {
+                    log.warn("SVG template not found with ID: {}", componentRequest.sourceId());
+                    return new BadRequestException("Source not found with ID: " + componentRequest.sourceId());
+                });
+
         var component = componentMapper.toComponent(componentRequest);
         component.setId(UUID.randomUUID());
         component.setAuthor(user);
@@ -154,6 +207,8 @@ public class BoardService {
 
         kafkaTemplate.send("db-event", new KafkaEvent<>("Component", "CREATE", component));
         var componentResponse = componentMapper.toComponentResponse(component, userMapper);
+
+        log.info("Component created with ID: {} on board ID: {}", component.getId(), boardId);
         sseEmitterService.sendAll(boardId, new SseEvent<>("Component", "CREATE", componentResponse));
         return componentResponse;
     }
@@ -164,8 +219,13 @@ public class BoardService {
         if (authentication != null) {
             login = (String) authentication.getPrincipal();
         } else {
+            log.warn("Unauthorized access attempt");
             throw new AuthException("Unauthorized");
         }
-        return userRepository.findByLogin(login).orElseThrow(() -> new EntityNotFoundException("User not found with the login: " + login));
+
+        return userRepository.findByLogin(login).orElseThrow(() -> {
+            log.warn("User not found with login: {}", login);
+            return new EntityNotFoundException("User not found with the login: " + login);
+        });
     }
 }
