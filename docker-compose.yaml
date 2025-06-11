@@ -1,14 +1,28 @@
 services:
   kafka:
-    container_name: kafka-container
-    image: apache/kafka
+    image: confluentinc/cp-kafka:8.0.0
+    container_name: kafka
     ports:
       - "9092:9092"
-    restart: unless-stopped
+    environment:
+      CLUSTER_ID: 1
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
 
   db:
     container_name: db
     image: postgres:latest
+    ports:
+      - "5435:5432"
     environment:
       POSTGRES_USER: retro_user
       POSTGRES_PASSWORD: 12345
@@ -16,7 +30,8 @@ services:
 
   db-service:
     container_name: db-service
-    image: db-service:0.0.1-SNAPSHOT
+    build:
+      context: ./db-service
     ports:
       - "8081:8081"
     environment:
@@ -31,7 +46,8 @@ services:
 
   api-service:
     container_name: api-service
-    image: api-service:0.0.1-SNAPSHOT
+    build:
+      context: ./api-service
     ports:
       - "8080:8080"
     environment:

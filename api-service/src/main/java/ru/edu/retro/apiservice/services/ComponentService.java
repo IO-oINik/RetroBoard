@@ -15,6 +15,8 @@ import ru.edu.retro.apiservice.models.db.Vote;
 import ru.edu.retro.apiservice.models.dto.KafkaEvent;
 import ru.edu.retro.apiservice.models.dto.requests.ComponentEditRequest;
 import ru.edu.retro.apiservice.models.dto.responses.ComponentResponse;
+import ru.edu.retro.apiservice.models.dto.responses.SseEvent;
+import ru.edu.retro.apiservice.models.dto.responses.VoteResponse;
 import ru.edu.retro.apiservice.repositories.BoardRepositoryReadOnly;
 import ru.edu.retro.apiservice.repositories.ComponentRepositoryReadOnly;
 import ru.edu.retro.apiservice.repositories.UserRepository;
@@ -33,6 +35,7 @@ public class ComponentService {
     private final UserRepository userRepository;
     private final KafkaTemplate<String, KafkaEvent<?>> kafkaTemplate;
     private final UserMapper userMapper;
+    private final SseEmitterService sseEmitterService;
 
     public List<ComponentResponse> getComponentsByBoardId(UUID id) {
         var board = boardRepository
@@ -55,7 +58,9 @@ public class ComponentService {
         component.setY(componentEditRequest.y());
 
         kafkaTemplate.send("db-event", new KafkaEvent<>("Component", "EDIT", component));
-        return componentMapper.toComponentResponse(component, userMapper);
+        var componentResponse = componentMapper.toComponentResponse(component, userMapper);
+        sseEmitterService.sendAll(component.getBoard().getId(), new SseEvent<>("Component", "EDIT", componentResponse));
+        return componentResponse;
     }
 
     public void deleteById(UUID id) {
@@ -71,6 +76,10 @@ public class ComponentService {
         }
 
         kafkaTemplate.send("db-event", new KafkaEvent<>("Component", "DELETE", component));
+        sseEmitterService.sendAll(component.getBoard().getId(),
+                new SseEvent<>("Component",
+                        "DELETE",
+                        componentMapper.toComponentResponse(component, userMapper)));
     }
 
     public void addVote(UUID idComponent) {
@@ -82,6 +91,7 @@ public class ComponentService {
         }
 
         kafkaTemplate.send("db-event", new KafkaEvent<>("Vote", "CREATE", new Vote(user, component)));
+        sseEmitterService.sendAll(component.getBoard().getId(), new SseEvent<>("Vote", "CREATE", new VoteResponse(component.getId())));
     }
 
     public void removeVote(UUID idComponent) {
@@ -95,7 +105,10 @@ public class ComponentService {
         var component = optionalComponent.get();
         var voteOptional = voteRepository.findByComponentIdAndUserId(component.getId(), user.getId());
 
-        voteOptional.ifPresent(vote -> kafkaTemplate.send("db-event", new KafkaEvent<>("Vote", "DELETE", vote)));
+        voteOptional.ifPresent(vote -> {
+            kafkaTemplate.send("db-event", new KafkaEvent<>("Vote", "DELETE", vote));
+            sseEmitterService.sendAll(component.getBoard().getId(), new SseEvent<>("Vote", "DELETE", new VoteResponse(component.getId())));
+        });
     }
 
     private User findMe() {

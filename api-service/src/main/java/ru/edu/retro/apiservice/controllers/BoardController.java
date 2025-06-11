@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import ru.edu.retro.apiservice.models.dto.requests.BoardRequest;
 import ru.edu.retro.apiservice.models.dto.requests.ComponentRequest;
 import ru.edu.retro.apiservice.models.dto.responses.BoardInviteToken;
@@ -19,6 +20,7 @@ import ru.edu.retro.apiservice.models.dto.responses.ComponentResponse;
 import ru.edu.retro.apiservice.models.dto.responses.UserResponse;
 import ru.edu.retro.apiservice.services.BoardService;
 import ru.edu.retro.apiservice.services.ComponentService;
+import ru.edu.retro.apiservice.services.SseEmitterService;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +31,12 @@ import java.util.UUID;
 public class BoardController {
     private final BoardService boardService;
     private final ComponentService componentService;
+    private final SseEmitterService sseEmitterService;
+
+    @GetMapping("/{id}/events")
+    public SseEmitter createEmitter(@PathVariable UUID id) {
+        return sseEmitterService.addEmitter(id);
+    }
 
     @PostMapping
     public ResponseEntity<BoardResponse> createBoard(@Valid @RequestBody BoardRequest boardRequest) {

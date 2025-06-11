@@ -7,7 +7,7 @@ import ru.edu.retro.apiservice.models.db.Component;
 import ru.edu.retro.apiservice.models.dto.requests.ComponentRequest;
 import ru.edu.retro.apiservice.models.dto.responses.ComponentResponse;
 
-@Mapper(componentModel = "spring", uses = {UserMapper.class})
+@Mapper(componentModel = "spring", uses = {UserMapper.class, SvgTemplateMapper.class})
 public interface ComponentMapper {
     Component toComponent(ComponentRequest componentRequest);
 

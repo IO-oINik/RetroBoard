@@ -34,9 +34,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/boards/**").permitAll()
-                        .anyRequest().permitAll())
+                        .requestMatchers("/auth/login/**").permitAll()
+                        .requestMatchers("/auth/register/**").permitAll()
+                        .anyRequest().authenticated())
 
                 .sessionManagement(sessionManagement ->
                         sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -58,7 +58,7 @@ public class SecurityConfig {
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("", configuration);
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }

@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: {$PROFILE_ACTIVE:dev}
+    active: ${PROFILE_ACTIVE:dev}
   application:
     name: db-service
   datasource:
@@ -20,4 +20,3 @@ logging:
 
 server:
   port: 8081
-

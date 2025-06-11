@@ -21,6 +21,7 @@ import ru.edu.retro.apiservice.models.dto.requests.ComponentRequest;
 import ru.edu.retro.apiservice.models.dto.responses.BoardInviteToken;
 import ru.edu.retro.apiservice.models.dto.responses.BoardResponse;
 import ru.edu.retro.apiservice.models.dto.responses.ComponentResponse;
+import ru.edu.retro.apiservice.models.dto.responses.SseEvent;
 import ru.edu.retro.apiservice.models.dto.responses.UserResponse;
 import ru.edu.retro.apiservice.repositories.BoardRepositoryReadOnly;
 import ru.edu.retro.apiservice.repositories.SVGTemplateRepositoryReadOnly;
@@ -42,6 +43,7 @@ public class BoardService {
     private final BoardMapper boardMapper;
     private final UserMapper userMapper;
     private final KafkaTemplate<String, KafkaEvent<?>> kafkaTemplate;
+    private final SseEmitterService sseEmitterService;
 
     public BoardResponse getBoardById(UUID id) {
         return boardMapper
@@ -151,7 +153,9 @@ public class BoardService {
         component.setSource(svgTemplate);
 
         kafkaTemplate.send("db-event", new KafkaEvent<>("Component", "CREATE", component));
-        return componentMapper.toComponentResponse(component, userMapper);
+        var componentResponse = componentMapper.toComponentResponse(component, userMapper);
+        sseEmitterService.sendAll(boardId, new SseEvent<>("Component", "CREATE", componentResponse));
+        return componentResponse;
     }
 
     private User findMe() {
