@@ -1,6 +1,5 @@
 package ru.edu.retro.apiservice.filters;
 
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String login;
         try {
             login = jwtUtils.extractLogin(jwt);
-        } catch (ExpiredJwtException e) {
+        } catch (Exception e) {
             filterChain.doFilter(request, response);
             return;
         }

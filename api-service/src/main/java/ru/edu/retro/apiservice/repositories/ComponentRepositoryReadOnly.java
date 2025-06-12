@@ -1,5 +1,6 @@
 package ru.edu.retro.apiservice.repositories;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.repository.Repository;
 import ru.edu.retro.apiservice.models.db.Component;
 
@@ -9,6 +10,8 @@ import java.util.UUID;
 
 @org.springframework.stereotype.Repository
 public interface ComponentRepositoryReadOnly extends Repository<Component, Long> {
+    @EntityGraph(attributePaths = {"author", "source", "votes"})
     List<Component> findComponentByBoardId(UUID id);
+    @EntityGraph(attributePaths = {"author", "source", "votes"})
     Optional<Component> findComponentById(UUID id);
 }

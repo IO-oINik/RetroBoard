@@ -42,7 +42,7 @@ public class Board {
     @Column(name = "invite_edit_token", nullable = false)
     private UUID inviteEditToken;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "User_Board",
             joinColumns = @JoinColumn(name = "board_id"),
