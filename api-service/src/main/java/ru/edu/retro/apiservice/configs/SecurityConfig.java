@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login/**").permitAll()
                         .requestMatchers("/auth/register/**").permitAll()
                         .requestMatchers("/error/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated())
 
                 .sessionManagement(sessionManagement ->
@@ -55,6 +56,9 @@ public class SecurityConfig {
         configuration.addAllowedMethod(HttpMethod.POST);
         configuration.addAllowedMethod(HttpMethod.PATCH);
         configuration.addAllowedMethod(HttpMethod.DELETE);
+        configuration.addAllowedMethod(HttpMethod.OPTIONS);
+        configuration.addAllowedMethod(HttpMethod.HEAD);
+        configuration.addAllowedMethod(HttpMethod.PUT);
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
 
