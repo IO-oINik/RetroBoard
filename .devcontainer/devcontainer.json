@@ -1,6 +1,6 @@
 {
   "name": "Retro DevContainer",
-  "dockerComposeFile": "../docker-compose.yml",
+  "dockerComposeFile": "../docker-compose.yaml",
   "service": "api-service",
   "workspaceFolder": "/workspace",
   "forwardPorts": [8080, 8081, 5435, 9092],
