@@ -27,6 +27,8 @@ services:
       POSTGRES_USER: retro_user
       POSTGRES_PASSWORD: 12345
       POSTGRES_DB: Retro
+    volumes:
+      - ./CREATE.sql:/docker-entrypoint-initdb.d/CREATE.sql
 
   db-service:
     container_name: db-service

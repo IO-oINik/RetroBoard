@@ -1,0 +1,12 @@
+{
+  "name": "Retro DevContainer",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "api-service",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [8080, 8081, 5435, 9092],
+  "postCreateCommand": "docker-compose up -d",
+  "remoteUser": "root",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  }
+}
