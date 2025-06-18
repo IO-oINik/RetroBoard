@@ -1,5 +1,6 @@
 package ru.edu.retro.apiservice.controllers;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import ru.edu.retro.apiservice.services.AuthService;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Tag(name = "Auth")
 public class AuthController {
     private final AuthService authService;
 

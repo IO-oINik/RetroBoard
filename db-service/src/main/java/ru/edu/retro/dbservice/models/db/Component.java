@@ -32,10 +32,6 @@ public class Component {
     @Enumerated(EnumType.STRING)
     private ComponentType type;
 
-    @ManyToOne
-    @JoinColumn(name = "source_id")
-    private SVGTemplate source;
-
     @Column(nullable = false)
     private float x;
 

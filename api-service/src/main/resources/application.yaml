@@ -22,5 +22,12 @@ logging:
   file:
     name: logs/api-service.log
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui
+
 sse:
   timeout: 1800000

@@ -26,7 +26,7 @@ public class Board {
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "author_id")
     private User author;
 
@@ -42,7 +42,7 @@ public class Board {
     @Column(name = "invite_edit_token", nullable = false)
     private UUID inviteEditToken;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "User_Board",
             joinColumns = @JoinColumn(name = "board_id"),

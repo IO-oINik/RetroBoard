@@ -11,6 +11,9 @@ import ru.edu.retro.dbservice.models.db.Board;
 import ru.edu.retro.dbservice.models.db.Component;
 import ru.edu.retro.dbservice.models.db.Vote;
 import ru.edu.retro.dbservice.models.dto.KafkaEvent;
+import ru.edu.retro.dbservice.models.dto.kafka.BoardDtoKafka;
+import ru.edu.retro.dbservice.models.dto.kafka.ComponentDtoKafka;
+import ru.edu.retro.dbservice.models.dto.kafka.VoteDtoKafka;
 
 import java.util.Map;
 
@@ -19,9 +22,9 @@ public class KafkaEventDeserializer implements Deserializer<KafkaEvent<?>> {
     private final ObjectMapper mapper = new ObjectMapper();
 
     private final Map<String, Class<?>> typeMap = Map.of(
-            "Component", Component.class,
-            "Board", Board.class,
-            "Vote", Vote.class
+            "Component", ComponentDtoKafka.class,
+            "Board", BoardDtoKafka.class,
+            "Vote", VoteDtoKafka.class
     );
 
     @Override

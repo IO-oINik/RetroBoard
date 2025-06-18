@@ -10,8 +10,8 @@ import java.util.UUID;
 
 @org.springframework.stereotype.Repository
 public interface ComponentRepositoryReadOnly extends Repository<Component, Long> {
-    @EntityGraph(attributePaths = {"author", "source", "votes"})
+    @EntityGraph(attributePaths = {"author", "votes"})
     List<Component> findComponentByBoardId(UUID id);
-    @EntityGraph(attributePaths = {"author", "source", "votes"})
+    @EntityGraph(attributePaths = {"author", "votes"})
     Optional<Component> findComponentById(UUID id);
 }

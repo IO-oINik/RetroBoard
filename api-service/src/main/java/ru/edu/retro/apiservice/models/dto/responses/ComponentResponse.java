@@ -11,7 +11,6 @@ public class ComponentResponse {
     private UUID id;
     private String title;
     private String description;
-    private SVGTemplateResponse source;
     private UserResponse author;
     private ComponentType type;
     private Float x;

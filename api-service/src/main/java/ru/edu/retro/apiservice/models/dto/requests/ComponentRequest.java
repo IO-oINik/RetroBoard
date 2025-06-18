@@ -25,7 +25,7 @@ public record ComponentRequest(
         @NotNull(message = "isAnonymousAuthor cannot be null")
         Boolean isAnonymousAuthor,
         @NotNull(message = "isAnonymousVote cannot be null")
-        Boolean isAnonymousVote,
+        Boolean isAnonymousVotes,
         @NotNull(message = "sourceId cannot be null")
         Long sourceId
 ) {

@@ -7,7 +7,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import ru.edu.retro.apiservice.exceptions.AuthException;
-import ru.edu.retro.apiservice.exceptions.BadRequestException;
 import ru.edu.retro.apiservice.exceptions.EntityNotFoundException;
 import ru.edu.retro.apiservice.exceptions.ForbiddenException;
 import ru.edu.retro.apiservice.exceptions.InvalidInviteTokenException;
@@ -25,10 +24,10 @@ import ru.edu.retro.apiservice.models.dto.responses.ComponentResponse;
 import ru.edu.retro.apiservice.models.dto.responses.SseEvent;
 import ru.edu.retro.apiservice.models.dto.responses.UserResponse;
 import ru.edu.retro.apiservice.repositories.BoardRepositoryReadOnly;
-import ru.edu.retro.apiservice.repositories.SVGTemplateRepositoryReadOnly;
 import ru.edu.retro.apiservice.repositories.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,7 +38,6 @@ import java.util.UUID;
 public class BoardService {
 
     private final BoardRepositoryReadOnly boardRepository;
-    private final SVGTemplateRepositoryReadOnly svgTemplateRepository;
     private final UserService userService;
     private final UserRepository userRepository;
     private final ComponentMapper componentMapper;
@@ -58,18 +56,19 @@ public class BoardService {
     }
 
     public List<BoardResponse> getMyBoards() {
-        var user = userService.findMe();
-        log.debug("Fetching boards for user ID: {}", user.id());
-        var boards = boardRepository.findBoardsByAuthorId(user.id());
+        var user = findMe();
+        log.debug("Fetching boards for user ID: {}", user.getId());
+        var boards = boardRepository.findBoardsByAuthorId(user.getId());
         return boards.stream().map(boardMapper::toBoardResponse).toList();
     }
 
     public BoardInviteToken getInviteTokenById(UUID id) {
+        var user = findMe();
         log.debug("Getting invite token for board ID: {}", id);
-        var board = boardRepository.findById(id).orElseThrow(() -> {
-            log.warn("Board not found with ID: {}", id);
-            return new EntityNotFoundException("Board not found with the ID: " + id);
-        });
+        var board = boardRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Board not found with the ID: " + id));
+        if (!board.getAuthor().getId().equals(user.getId())) {
+            throw new ForbiddenException("User is forbidden to get invite token for this board");
+        }
         return new BoardInviteToken(board.getInviteEditToken());
     }
 
@@ -91,7 +90,7 @@ public class BoardService {
         board.setCreatedAt(LocalDateTime.now());
 
         log.info("Creating board with ID: {}", board.getId());
-        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "CREATE", board));
+        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "CREATE", boardMapper.toBoardDtoKafka(board)));
         return boardMapper.toBoardResponse(board);
     }
 
@@ -112,7 +111,7 @@ public class BoardService {
         }
 
         log.info("Deleting board ID: {}", id);
-        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "DELETE", board));
+        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "DELETE", boardMapper.toBoardDtoKafka(board)));
     }
 
     public void addEditor(UUID id, BoardInviteToken token) {
@@ -132,7 +131,7 @@ public class BoardService {
         if (!board.getAuthor().equals(user) && !board.getEditors().contains(user)) {
             board.getEditors().add(user);
             log.info("User ID: {} added as editor to board ID: {}", user.getId(), id);
-            kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", board));
+            kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", boardMapper.toBoardDtoKafka(board)));
         } else {
             log.debug("User ID: {} is already an editor or the author of board ID: {}", user.getId(), id);
         }
@@ -154,9 +153,8 @@ public class BoardService {
 
         var inviteToken = new BoardInviteToken(UUID.randomUUID());
         board.setInviteEditToken(inviteToken.token());
-
         log.info("Generated new invite token for board ID: {}", id);
-        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", board));
+        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", boardMapper.toBoardDtoKafka(board)));
         return inviteToken;
     }
 
@@ -176,7 +174,7 @@ public class BoardService {
 
         board.getEditors().removeIf(e -> e.getId().equals(editorId));
         log.info("Editor ID: {} removed from board ID: {}", editorId, boardId);
-        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", board));
+        kafkaTemplate.send("db-event", new KafkaEvent<>("Board", "UPDATE", boardMapper.toBoardDtoKafka(board)));
     }
 
     public ComponentResponse createComponent(UUID boardId, ComponentRequest componentRequest) {
@@ -193,19 +191,13 @@ public class BoardService {
             throw new ForbiddenException("User is forbidden to create component");
         }
 
-        var svgTemplate = svgTemplateRepository.findById(componentRequest.sourceId())
-                .orElseThrow(() -> {
-                    log.warn("SVG template not found with ID: {}", componentRequest.sourceId());
-                    return new BadRequestException("Source not found with ID: " + componentRequest.sourceId());
-                });
-
         var component = componentMapper.toComponent(componentRequest);
         component.setId(UUID.randomUUID());
         component.setAuthor(user);
         component.setBoard(board);
-        component.setSource(svgTemplate);
+        component.setVotes(Collections.emptyList());
 
-        kafkaTemplate.send("db-event", new KafkaEvent<>("Component", "CREATE", component));
+        kafkaTemplate.send("db-event", new KafkaEvent<>("Component", "CREATE", componentMapper.toComponentDtoKafka(component)));
         var componentResponse = componentMapper.toComponentResponse(component, userMapper);
 
         log.info("Component created with ID: {} on board ID: {}", component.getId(), boardId);
