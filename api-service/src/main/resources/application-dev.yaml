@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5435/Retro}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/Retro}
     username: ${DB_USERNAME:retro_user}
     password: ${DB_PASSWORD:12345}
   kafka:
