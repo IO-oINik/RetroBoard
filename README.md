@@ -14,35 +14,6 @@
 - Совместно редактировать в реальном времени (REST API + SSE)
 - Систему доступа через JWT + инвайт-токены
 
-## Запуск проекта
-
-### Требования
-- Docker 20.10+
-- Docker Compose 1.29+
-
-### Команды
-
-Запуск всех сервисов (фоновый режим):
-```bash
-docker-compose up --build -d
-```
-
-Проверка статуса:
-```bash
-docker-compose ps
-```
-
-
-Остановка:
-```bash
-docker-compose down
-```
-
-Логи API:
-```bash
-docker-compose logs -f api-service
-```
-
 ## Технологии
 
 - Spring Boot
